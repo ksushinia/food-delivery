@@ -1,8 +1,8 @@
 from django.db import models
-
+from django.utils import timezone
 
 class Category(models.Model):
-    # CharField - это строка (VARCHAR). max_length обязателен.
+    # CharField это строка VARCHAR. max_length обязателен.
     name = models.CharField(max_length=100, verbose_name="Название категории")
     slug = models.SlugField(unique=True, verbose_name="URL-метка")  # например "pizza" для ссылки
 
@@ -11,7 +11,7 @@ class Category(models.Model):
         verbose_name_plural = "Категории"
 
     def __str__(self):
-        return self.name  # Чтобы в админке писалось "Пицца", а не "Category object (1)"
+        return self.name  # Чтобы в админке писалось "Пицца"
 
 
 class Product(models.Model):
@@ -19,8 +19,8 @@ class Product(models.Model):
     description = models.TextField(blank=True, verbose_name="Описание")  # Текст любой длины
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")  # Деньги храним в Decimal!
 
-    # Ссылка на категорию (Один ко многим: в одной категории много товаров)
-    # on_delete=models.CASCADE означает: если удалить категорию, удалятся и все товары в ней.
+    # Ссылка на категорию, один ко многим: в одной категории много товаров
+    # on_delete=models.CASCADE если удалить категорию, удалятся и все товары в ней.
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', verbose_name="Категория")
 
     # Картинка. upload_to указывает папку, куда кидать файлы
@@ -52,8 +52,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name="Статус")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
-
-    # Общая сумма заказа (будем считать её сами)
+    promo_code = models.CharField(max_length=20, blank=True, null=True, verbose_name="Промокод")
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Сумма")
 
     class Meta:
@@ -73,3 +72,17 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+
+class PromoCode(models.Model):
+    code = models.CharField(max_length=20, unique=True, verbose_name="Код купона")
+    discount_percent = models.PositiveIntegerField(verbose_name="Скидка %")
+    valid_until = models.DateTimeField(verbose_name="Действует до")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+
+    def __str__(self):
+        return f"{self.code} (-{self.discount_percent}%)"
+
+    # Метод-помощник: проверяет, валиден ли купон прямо сейчас
+    def is_valid(self):
+        return self.is_active and self.valid_until >= timezone.now()

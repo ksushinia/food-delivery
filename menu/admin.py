@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import PromoCode
 from .models import Category, Product, Order, OrderItem
 
 @admin.register(Category)
@@ -32,3 +33,7 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.action(description="Обновить статус на 'Доставлен'")
     def mark_as_delivered(self, request, queryset):
         queryset.update(status='delivered')
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount_percent', 'valid_until', 'is_active')

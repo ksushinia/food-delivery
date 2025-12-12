@@ -62,6 +62,12 @@
                     </thead>
                     <tbody id="cartTableBody"></tbody>
                 </table>
+                <hr>
+                <div class="input-group mb-3 w-50 ms-auto">
+                    <span class="input-group-text">🎟️</span>
+                    <input type="text" class="form-control" id="promoCodeInput" placeholder="Промокод">
+                </div>
+
                 <h4 class="text-end">Итого: <span id="cartTotal">0</span> ₽</h4>
                 <hr>
                 <form id="orderForm">
@@ -78,7 +84,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
     // --- Старый JS для корзины ---
@@ -87,8 +92,11 @@
 
     function addToCart(id, name, price) {
         const existingItem = cart.find(item => item.id === id);
-        if (existingItem) existingItem.qty += 1;
-        else cart.push({ id, name, price, qty: 1 });
+        if (existingItem) {
+            existingItem.qty += 1;
+        } else {
+            cart.push({ id: id, name: name, price: price, qty: 1 });
+        }
         updateCartBadge();
     }
 
@@ -101,11 +109,27 @@
         const tbody = document.getElementById('cartTableBody');
         tbody.innerHTML = '';
         let total = 0;
-        cart.forEach((item, index) => {
-            total += item.price * item.qty;
-            tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price * item.qty}</td><td><button class="btn btn-sm btn-danger" onclick="removeFromCart(${index})">×</button></td></tr>`;
-        });
+
+        // Рисуем таблицу
+        if (cart.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Пусто... 🕸️</td></tr>';
+        } else {
+            cart.forEach((item, index) => {
+                const rowSum = item.price * item.qty;
+                total += rowSum;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.qty} шт.</td>
+                        <td>${rowSum} ₽</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="removeFromCart(${index})">×</button></td>
+                    </tr>`;
+            });
+        }
+
         document.getElementById('cartTotal').innerText = total;
+
+        // Инициализируем модалку (Bootstrap 5)
         cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
         cartModal.show();
     }
@@ -113,19 +137,25 @@
     function removeFromCart(index) {
         cart.splice(index, 1);
         updateCartBadge();
-        document.querySelector('.btn-close').click();
-        setTimeout(openCartModal, 200);
+        // Хак: закрываем и открываем, чтобы перерисовать (просто и надежно)
+        cartModal.hide();
+        setTimeout(() => openCartModal(), 200);
     }
 
     // --- ОБНОВЛЕННАЯ ОТПРАВКА ---
     async function submitOrder() {
         if (cart.length === 0) return alert("Корзина пуста!");
-        
+
         const data = {
             first_name: document.getElementById('clientName').value,
             phone_number: document.getElementById('clientPhone').value,
             address: document.getElementById('clientAddress').value,
-            items: cart.map(item => ({ product: item.id, quantity: item.qty }))
+
+            // Массив товаров
+            items: cart.map(item => ({ product: item.id, quantity: item.qty })),
+
+            // Промокод (с проверкой на существование элемента)
+            promo_code_str: document.getElementById('promoCodeInput') ? document.getElementById('promoCodeInput').value : ""
         };
 
         try {
@@ -137,13 +167,15 @@
 
             if (response.ok) {
                 const result = await response.json();
-                // 🚀 ВМЕСТО АЛЕРТА - ПЕРЕАДРЕСАЦИЯ НА СТРАНИЦУ ЗАКАЗА
-                window.location.href = `/order/${result.id}/`; 
+                // Перенаправляем на страницу статуса
+                window.location.href = `/order/${result.id}/`;
             } else {
-                alert('Ошибка');
+                const err = await response.json();
+                alert('Ошибка заказа: ' + JSON.stringify(err));
             }
         } catch (error) {
-            alert('Ошибка сети');
+            console.error(error);
+            alert('Ошибка сети или скрипта');
         }
     }
 </script>
