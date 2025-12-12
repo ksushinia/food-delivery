@@ -1,52 +1,43 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Food 🍔</title>
-    <!-- Подключаем Bootstrap (Красота из облака) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .product-img { height: 200px; object-fit: cover; }
-        .card { transition: transform 0.2s; }
-        .card:hover { transform: scale(1.02); }
-    </style>
-</head>
-<body class="bg-light">
+{% extends 'base.html' %}
 
-<!-- Шапка -->
-<nav class="navbar navbar-dark bg-dark sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="#">🚀 Super Delivery</a>
-        <button class="btn btn-warning" onclick="alert('Корзина пока в разработке, заказывай по одному!')">🛒 Корзина</button>
-    </div>
-</nav>
+{% block title %}Меню ресторана{% endblock %}
 
-<!-- Меню -->
+{% block extra_css %}
+<style>
+    .product-img { height: 200px; object-fit: cover; }
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: scale(1.02); }
+    .cart-badge { font-size: 0.8rem; vertical-align: top; }
+</style>
+{% endblock %}
+
+{% block header_buttons %}
+<button class="btn btn-warning position-relative" onclick="openCartModal()">
+    🛒 Корзина
+    <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+</button>
+{% endblock %}
+
+{% block content %}
 <div class="container py-5">
     <h2 class="text-center mb-4">Наше Меню</h2>
-
     <div class="row row-cols-1 row-cols-md-3 g-4">
-        <!-- Django цикл: бежим по товарам -->
         {% for product in products %}
         <div class="col">
             <div class="card h-100 shadow-sm">
-                <!-- Картинка -->
                 {% if product.image %}
-                    <img src="{{ product.image.url }}" class="card-img-top product-img" alt="{{ product.name }}">
+                    <img src="{{ product.image.url }}" class="card-img-top product-img">
                 {% else %}
-                    <img src="https://via.placeholder.com/300x200?text=No+Image" class="card-img-top product-img">
+                    <img src="https://via.placeholder.com/300x200" class="card-img-top product-img">
                 {% endif %}
-
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text text-muted small">{{ product.description|truncatewords:10 }}</p>
                     <div class="mt-auto d-flex justify-content-between align-items-center">
                         <span class="fs-5 fw-bold">{{ product.price }} ₽</span>
-                        <!-- Кнопка вызывает модальное окно и запоминает ID товара -->
-                        <button class="btn btn-outline-success"
-                                onclick="openOrderModal('{{ product.id }}', '{{ product.name }}')">
-                            Заказать
+                        <button class="btn btn-outline-success" 
+                                onclick="addToCart({{ product.id }}, '{{ product.name }}', {{ product.price }})">
+                            + В корзину
                         </button>
                     </div>
                 </div>
@@ -56,93 +47,104 @@
     </div>
 </div>
 
-<!-- Модальное окно заказа (Спрятано) -->
-<div class="modal fade" id="orderModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Модальное окно (То же самое, что и было) -->
+<div class="modal fade" id="cartModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Заказ: <span id="modalProductName"></span></h5>
+                <h5 class="modal-title">Ваш заказ 🛍️</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>Название</th><th>Кол-во</th><th>Цена</th><th>Действие</th></tr>
+                    </thead>
+                    <tbody id="cartTableBody"></tbody>
+                </table>
+                <h4 class="text-end">Итого: <span id="cartTotal">0</span> ₽</h4>
+                <hr>
                 <form id="orderForm">
-                    <input type="hidden" id="productId">
-                    <div class="mb-3">
-                        <label class="form-label">Ваше имя</label>
-                        <input type="text" class="form-control" id="clientName" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Телефон</label>
-                        <input type="tel" class="form-control" id="clientPhone" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Адрес доставки</label>
-                        <textarea class="form-control" id="clientAddress" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Количество</label>
-                        <input type="number" class="form-control" id="clientQty" value="1" min="1">
-                    </div>
+                    <div class="mb-3"><label>Ваше имя</label><input type="text" class="form-control" id="clientName" required></div>
+                    <div class="mb-3"><label>Телефон</label><input type="tel" class="form-control" id="clientPhone" required></div>
+                    <div class="mb-3"><label>Адрес</label><textarea class="form-control" id="clientAddress" required></textarea></div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="submitOrder()">Оформить заказ</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-success" onclick="submitOrder()">✅ Оформить</button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Скрипты -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}
 <script>
-    let orderModal;
+    // --- Старый JS для корзины ---
+    let cart = [];
+    let cartModal;
 
-    // Открыть окно
-    function openOrderModal(id, name) {
-        document.getElementById('productId').value = id;
-        document.getElementById('modalProductName').innerText = name;
-        orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
-        orderModal.show();
+    function addToCart(id, name, price) {
+        const existingItem = cart.find(item => item.id === id);
+        if (existingItem) existingItem.qty += 1;
+        else cart.push({ id, name, price, qty: 1 });
+        updateCartBadge();
     }
 
-    // Отправить заказ в API
+    function updateCartBadge() {
+        const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+        document.getElementById('cartCount').innerText = totalQty;
+    }
+
+    function openCartModal() {
+        const tbody = document.getElementById('cartTableBody');
+        tbody.innerHTML = '';
+        let total = 0;
+        cart.forEach((item, index) => {
+            total += item.price * item.qty;
+            tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price * item.qty}</td><td><button class="btn btn-sm btn-danger" onclick="removeFromCart(${index})">×</button></td></tr>`;
+        });
+        document.getElementById('cartTotal').innerText = total;
+        cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+        cartModal.show();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCartBadge();
+        document.querySelector('.btn-close').click();
+        setTimeout(openCartModal, 200);
+    }
+
+    // --- ОБНОВЛЕННАЯ ОТПРАВКА ---
     async function submitOrder() {
+        if (cart.length === 0) return alert("Корзина пуста!");
+        
         const data = {
             first_name: document.getElementById('clientName').value,
             phone_number: document.getElementById('clientPhone').value,
             address: document.getElementById('clientAddress').value,
-            items: [
-                {
-                    product: parseInt(document.getElementById('productId').value),
-                    quantity: parseInt(document.getElementById('clientQty').value)
-                }
-            ]
+            items: cart.map(item => ({ product: item.id, quantity: item.qty }))
         };
 
         try {
             const response = await fetch('/api/orders/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Важно: Django требует CSRF токен, но для DRF API часто настраивают AllowAny
-                    // Если будет ошибка 403, скажи мне, добавим токен.
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
 
             if (response.ok) {
-                alert('Заказ успешно создан! Ждите курьера 🚀');
-                orderModal.hide();
+                const result = await response.json();
+                // 🚀 ВМЕСТО АЛЕРТА - ПЕРЕАДРЕСАЦИЯ НА СТРАНИЦУ ЗАКАЗА
+                window.location.href = `/order/${result.id}/`; 
             } else {
-                const err = await response.json();
-                alert('Ошибка: ' + JSON.stringify(err));
+                alert('Ошибка');
             }
         } catch (error) {
-            console.error(error);
             alert('Ошибка сети');
         }
     }
 </script>
-
-</body>
-</html>
+{% endblock %}

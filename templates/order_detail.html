@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Заказ #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Заказ #{{ order.id }}</h4>
+                    <span class="badge bg-light text-dark fs-6">{{ order.get_status_display }}</span>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Прогресс бар -->
+                    <h5 class="mb-3">Статус выполнения</h5>
+                    <div class="progress mb-4" style="height: 25px;">
+                        <!-- Django Template Logic: меняем ширину в зависимости от статуса -->
+                        {% if order.status == 'new' %}
+                            <div class="progress-bar bg-info" style="width: 20%">Принят</div>
+                        {% elif order.status == 'cooking' %}
+                            <div class="progress-bar bg-warning" style="width: 50%">Готовится 🍳</div>
+                        {% elif order.status == 'delivery' %}
+                            <div class="progress-bar bg-primary" style="width: 80%">Едет к вам 🚗</div>
+                        {% elif order.status == 'delivered' %}
+                            <div class="progress-bar bg-success" style="width: 100%">Доставлен ✅</div>
+                        {% else %}
+                             <div class="progress-bar bg-danger" style="width: 100%">Отменен ❌</div>
+                        {% endif %}
+                    </div>
+
+                    <h5 class="card-title">Детали доставки</h5>
+                    <p class="mb-1"><strong>Имя:</strong> {{ order.first_name }}</p>
+                    <p class="mb-1"><strong>Телефон:</strong> {{ order.phone_number }}</p>
+                    <p class="mb-3"><strong>Адрес:</strong> {{ order.address }}</p>
+
+                    <h5 class="card-title mt-4">Состав заказа</h5>
+                    <ul class="list-group mb-3">
+                        {% for item in order.items.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ item.product.name }}</strong>
+                                <small class="text-muted">x {{ item.quantity }}</small>
+                            </div>
+                            <span>{{ item.price }} ₽</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <h3 class="text-end">Итого: {{ order.total_price }} ₽</h3>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'index' %}" class="btn btn-outline-primary">Вернуться в меню</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
